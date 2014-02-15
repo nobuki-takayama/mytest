@@ -1,0 +1,85 @@
+/*
+  Correct value at x=2/10 is about 131.
+  Examples.
+  rk1b(0.0001,50000);
+  rk(0.0001,24);    not use DyMax  below. See the commented line.
+  rk1(0.01,40);
+  rk1(0.01,10);
+  rk1(0.01,10|till=0.15);
+  rk1(0.0001,1);
+*/
+extern DyMax$
+DyMax=50000$
+def myabs(X)  {
+   if (X<0) return(-X); else return(X); 
+}
+def mymax(A,B) {
+  if (B>A) return B; else return A;
+}
+
+def rk1b(H,N) {
+
+  X0=1/10;  Y0=1; 
+  X1=2/10;
+  Y=Y0;
+  E=0;
+  for (X=X0; X<=X1;  X += H) {
+     printf("x=%a, y=%a, error=%a\n",X,Y,E);
+     Ynew = Y+H*(Y-X)/X^2;
+     Enew = E+H*E/X^2+(H^2/2)*(1/X^4)*((-2*X+1)*(Y+E+H*N)+(X+H)^2+X+H);
+     Y=Ynew;
+     E=Enew;
+  }
+  printf("x=%a, y=%a, error=%a\n",X,Y,Enew);
+  return ([X,Y,E]);
+}
+def rk1(H,Q) {
+  extern DyMax;
+  X0=1/10;  Y0=1; 
+  X1=2/10;
+  if (type(getopt(till)) >= 0) {
+      X1 = eval_str(rtostr(getopt(till)));
+  }
+  Y=Y0;
+  E=0;
+  for (X=X0; X<=X1;  X += H) {
+     printf("x=%a, y=%a, error=%a, y'=%a\n",X,Y,Q,mydy(X,Y));
+     Ynew = Y+H*(Y-X)/X^2;
+/* old
+     Q +=getError2(X,Y,H,mymax(Q,myabs(Ynew-Y)));
+*/
+     Q +=getError2(X,Y,H,mymax(Q,myabs(DyMax*H)));
+     Y=Ynew;
+  }
+  printf("x=%a, y=%a, error=%a, y'=%a\n",X,Y,Q,mydy(X,Y));
+  return ([X,Y,Q]);
+}
+def mydy(X,Y) {
+  M = ((1-2*X)*Y+X*(X-1))/X^4;
+  return M;
+}
+def getError1(A,B,H,Q) {
+  M = myabs((1-2*A)*(B-Q)+A*(A-1));
+  for (X=A; X<=A+H; X += H/10) {
+    T = myabs((1-2*X)*(B-Q)+X*(X-1));
+    if (T > M) M=T;
+    T = myabs((1-2*X)*(B+Q)+X*(X-1));
+    if (T > M) M=T;
+  }
+  return (H^2/2)*M/A^4;
+}
+
+def getError2(A,B,H,Q) {
+  X=A; Y=B;
+  M = myabs(((1-2*X)*Y+X*(X-1))/X^4);
+  if (Q !=0) HH = 2*Q/10; else HH=1;
+  for (X=A; X<=A+H; X+=H/10) {
+     for (Y=B-Q; Y<=B+Q; Y += HH) {
+       T = myabs(((1-2*X)*Y+X*(X-1))/X^4);
+       if (T > M) M=T;
+     }
+  }
+  return (H^2/2)*M;
+}  
+
+end$
